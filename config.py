@@ -84,6 +84,16 @@ GREETING_COOLDOWN_FRAMES = 1
 AUDIO_PREFIX = "./sounds/"
 
 # ==============================================================================
+# KONFIGURASI VISITOR COUNTER
+# ==============================================================================
+
+# Path ke file CSV untuk menyimpan data pengunjung
+VISITOR_LOG_FILE = "./data/visitor_log.csv"
+
+# Apakah mengaktifkan logging pengunjung
+ENABLE_VISITOR_LOGGING = False
+
+# ==============================================================================
 # KONFIGURASI KAMERA
 # ==============================================================================
 

@@ -35,6 +35,9 @@ ENV/
 # Generated audio files
 greeting_*.mp3
 
+# Visitor data logs
+data/*.csv
+
 # OS
 .DS_Store
 Thumbs.db

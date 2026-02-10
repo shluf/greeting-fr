@@ -7,6 +7,8 @@ from gtts import gTTS
 import pygame
 import os
 import hashlib
+import csv
+from datetime import datetime
 from config import *
 
 def highlightFace(detector, frame, conf_threshold=FACE_CONFIDENCE_THRESHOLD):
@@ -202,6 +204,94 @@ pygame.mixer.init()
 last_greeting_hash = None
 greeting_cooldown = 0
 
+# --- SISTEM VISITOR COUNTER ---
+def init_visitor_log():
+    """Inisialisasi file CSV untuk logging pengunjung"""
+    if not ENABLE_VISITOR_LOGGING:
+        return
+    
+    # Buat direktori data jika belum ada
+    os.makedirs(os.path.dirname(VISITOR_LOG_FILE), exist_ok=True)
+    
+    # Cek apakah file sudah ada
+    file_exists = os.path.isfile(VISITOR_LOG_FILE)
+    
+    # Jika file belum ada, buat dengan header
+    if not file_exists:
+        with open(VISITOR_LOG_FILE, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['Tanggal', 'Waktu', 'Gender', 'Kategori_Umur', 'Rentang_Umur', 'Jumlah_Grup'])
+
+def log_visitor(genders, ages, count):
+    """Simpan data pengunjung ke CSV"""
+    if not ENABLE_VISITOR_LOGGING:
+        return
+    
+    try:
+        now = datetime.now()
+        tanggal = now.strftime('%Y-%m-%d')
+        waktu = now.strftime('%H:%M:%S')
+        
+        # Jika grup, catat semua anggota
+        with open(VISITOR_LOG_FILE, 'a', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            
+            for i in range(len(genders)):
+                gender = genders[i]
+                age = ages[i]
+                age_category = get_age_category(age)
+                
+                writer.writerow([
+                    tanggal,
+                    waktu,
+                    gender,
+                    age_category,
+                    age,
+                    count
+                ])
+        
+        print(f"[LOG] Data pengunjung disimpan: {count} orang pada {waktu}")
+    except Exception as e:
+        print(f"Error logging visitor: {e}")
+
+def get_visitor_stats_today():
+    """Mendapatkan statistik pengunjung hari ini"""
+    if not ENABLE_VISITOR_LOGGING or not os.path.isfile(VISITOR_LOG_FILE):
+        return {'total': 0, 'male': 0, 'female': 0, 'age_categories': {}}
+    
+    try:
+        today = datetime.now().strftime('%Y-%m-%d')
+        total = 0
+        male_count = 0
+        female_count = 0
+        age_categories = {}
+        
+        with open(VISITOR_LOG_FILE, 'r', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row['Tanggal'] == today:
+                    total += 1
+                    if row['Gender'] == 'Male':
+                        male_count += 1
+                    else:
+                        female_count += 1
+                    
+                    age_cat = row['Kategori_Umur']
+                    age_categories[age_cat] = age_categories.get(age_cat, 0) + 1
+        
+        return {
+            'total': total,
+            'male': male_count,
+            'female': female_count,
+            'age_categories': age_categories
+        }
+    except Exception as e:
+        print(f"Error getting visitor stats: {e}")
+        return {'total': 0, 'male': 0, 'female': 0, 'age_categories': {}}
+
+# Inisialisasi visitor log
+init_visitor_log()
+
 def get_age_category(age_string):
     """Mengkategorikan umur ke dalam kelompok"""
     age_map = {
@@ -332,6 +422,9 @@ def find_closest_face(center, face_trackers, max_distance=MAX_TRACKING_DISTANCE)
     return closest_id
 
 print("Tekan 'q' pada keyboard untuk keluar.")
+
+# Variabel untuk tracking visitor yang sudah di-log
+logged_visitors = set()
 
 while cv2.waitKey(1) < 0:
     hasFrame, frame = video.read()
@@ -478,6 +571,7 @@ while cv2.waitKey(1) < 0:
         # Kumpulkan data dari face trackers yang stabil (minimal 5 frame)
         stable_genders = []
         stable_ages = []
+        crossing_face_ids = []
         
         for face_id in current_face_ids:
             tracker = face_trackers[face_id]
@@ -488,6 +582,7 @@ while cv2.waitKey(1) < 0:
                     age = statistics.mode(tracker['age_buffer'])
                     stable_genders.append(gender)
                     stable_ages.append(age)
+                    crossing_face_ids.append(face_id)
                 except:
                     pass
         
@@ -502,6 +597,21 @@ while cv2.waitKey(1) < 0:
                 last_greeting_hash = greeting_hash
                 greeting_cooldown = GREETING_COOLDOWN_FRAMES
                 
+                # Log visitor data (hanya untuk wajah yang belum di-log)
+                visitors_to_log = []
+                genders_to_log = []
+                ages_to_log = []
+                
+                for i, face_id in enumerate(crossing_face_ids):
+                    if face_id not in logged_visitors:
+                        visitors_to_log.append(face_id)
+                        genders_to_log.append(stable_genders[i])
+                        ages_to_log.append(stable_ages[i])
+                        logged_visitors.add(face_id)
+                
+                if len(visitors_to_log) > 0:
+                    log_visitor(genders_to_log, ages_to_log, len(visitors_to_log))
+                
                 # Tampilkan greeting di layar
                 cv2.putText(resultImg, "Greeting: Playing...", (20, 80), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
@@ -510,6 +620,14 @@ while cv2.waitKey(1) < 0:
     if greeting_cooldown > 0:
         cv2.putText(resultImg, f"Cooldown: {greeting_cooldown//30}s", (20, 110), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2, cv2.LINE_AA)
+    
+    # Tampilkan statistik pengunjung hari ini
+    if ENABLE_VISITOR_LOGGING:
+        stats = get_visitor_stats_today()
+        cv2.putText(resultImg, f"Hari ini: {stats['total']} pengunjung", (20, frame_height - 60), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(resultImg, f"L: {stats['male']} | P: {stats['female']}", (20, frame_height - 30), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
         
     # Tampilkan window
     cv2.imshow("Real-time Face/Age/Gender Detection", resultImg)

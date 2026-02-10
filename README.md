@@ -15,6 +15,7 @@ Sistem greeting otomatis berbasis deteksi wajah dengan teknologi AI untuk menyam
 - **Face Tracking**: Sistem tracking per individu untuk konsistensi hasil
 - **Anti-Flickering**: Voting system dengan buffer 10 frame untuk stabilitas prediksi
 - **Smart Cooldown**: Mencegah greeting berulang yang tidak perlu
+- **Visitor Counter**: Pencatatan otomatis data pengunjung harian (gender, usia) ke CSV
 
 ## Teknologi
 
@@ -80,8 +81,10 @@ greeting/
 │   ├── age_net.caffemodel
 │   ├── gender_deploy.prototxt
 │   └── gender_net.caffemodel
-└── sounds/                             # Folder audio greeting (auto-generated)
-    └── greeting_*.mp3
+├── sounds/                             # Folder audio greeting (auto-generated)
+│   └── greeting_*.mp3
+└── data/                               # Folder data pengunjung
+    └── visitor_log.csv                 # Log pengunjung harian
 ```
 
 ## Cara Kerja Sistem
@@ -94,6 +97,29 @@ greeting/
 6. **Boundary Crossing**: Deteksi saat wajah melewati garis batas yang telah dikonfigurasi
 7. **Greeting Generation**: Generate sapaan bahasa Jawa berdasarkan konteks
 8. **Audio Playback**: Convert text ke speech dan play audio greeting
+9. **Data Logging**: Catat data pengunjung (tanggal, waktu, gender, usia) ke CSV
+
+## Visitor Counter System
+
+Sistem secara otomatis mencatat setiap pengunjung yang melewati boundary line dengan informasi:
+- Tanggal dan waktu kunjungan
+- Gender (Male/Female)
+- Kategori usia (bayi, bocah, nom, mudha, dewasa, sepuh)
+- Rentang usia prediksi
+- Jumlah orang dalam grup
+
+Data disimpan di `data/visitor_log.csv` dan dapat dianalisis untuk statistik pengunjung harian, mingguan, atau bulanan.
+
+Format CSV:
+```
+Tanggal,Waktu,Gender,Kategori_Umur,Rentang_Umur,Jumlah_Grup
+2026-02-10,14:30:15,Male,mudha,(25-32),1
+2026-02-10,14:35:22,Female,nom,(15-20),2
+```
+
+Statistik hari ini ditampilkan real-time di layar:
+- Total pengunjung hari ini
+- Jumlah laki-laki dan perempuan
 
 ## Algoritma Boundary Crossing
 
