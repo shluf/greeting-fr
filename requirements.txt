@@ -1,6 +1,4 @@
-face_recognition
-opencv-python
-numpy
-requests
-Pillow
-piper-tts
+opencv-python>=4.8.0
+gTTS>=2.3.0
+pygame>=2.5.0
+numpy>=1.24.0

@@ -22,20 +22,8 @@ wheels/
 
 # Virtual Environment
 venv/
-ENV/
 env/
-.venv
-
-# Face Recognition
-dataset_faces.dat
-Webcam_*.jpg
-*.dat
-
-# Audio Files
-welcome.wav
-welcome.mp3
-*.wav
-*.mp3
+ENV/
 
 # IDE
 .vscode/
@@ -44,15 +32,12 @@ welcome.mp3
 *.swo
 *~
 
+# Generated audio files
+greeting_*.mp3
+
 # OS
 .DS_Store
 Thumbs.db
 
 # Logs
 *.log
-
-# Personal data - don't commit face images
-images/*
-
-# Config files with sensitive data
-config.local.py
